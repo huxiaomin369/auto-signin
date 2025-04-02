@@ -31,7 +31,17 @@ cd ddddocr
 python setup.py install
 ```
 
-## 运行
+## 使用
 ```sh
+# 安装依赖
+pip install -r requirements.txt
+# 运行
 python testOcr.py
+```
+
+## 可选
+```sh
+# 使用conda管理环境
+conda env create -f environment.yml
+conda activate autosign
 ```
