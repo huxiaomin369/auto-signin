@@ -1,41 +1,41 @@
 import ddddocr
-from selenium import webdriver
-from urllib.parse import urlencode
-import requests
+from seleniumwire import webdriver
 import json
 
 import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException,TimeoutException
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.common.action_chains import ActionChains
+
 from imageUtil import url_to_imageBytes,get_image_width
 
-userName = "xxx"
-password = "xxx"
+userName = "xxxx"
+password = "xxxx"
+
+debugMode = False
 
 
 if __name__ == "__main__":
   myUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-  # 设置无头模式
   options = Options()
-  options.add_argument('--headless')
-  options.add_argument('--disable-gpu')
   options.add_argument('--no-sandbox')
   options.add_argument('--disable-extensions')
   options.add_argument("disable-blink-features=AutomationControlled")
   options.add_argument(f'user-agent={myUserAgent}')
   options.add_experimental_option('excludeSwitches', ['enable-automation'])
   options.add_experimental_option('useAutomationExtension', False)
-  # 设置禁止加载图片的选项
-  prefs = {
-      "profile.managed_default_content_settings.images": 2,
-      'permissions.default.stylesheet': 2  # 同时禁止CSS加载
-  }
-  options.add_experimental_option("prefs", prefs)
+  if not debugMode:
+    # 设置无头模式
+    options.add_argument('--headless')
+    options.add_argument('--disable-gpu')
+    # 设置禁止加载图片的选项
+    prefs = {
+        "profile.managed_default_content_settings.images": 2,
+        'permissions.default.stylesheet': 2  # 同时禁止CSS加载
+    }
+    options.add_experimental_option("prefs", prefs)
   driver = None
   try:
       driver = webdriver.Chrome(options=options)
@@ -61,19 +61,13 @@ if __name__ == "__main__":
         EC.element_to_be_clickable((By.CSS_SELECTOR, "button.el-button.el-button--primary.login-btn"))
       )
       button.click()
-      time.sleep(2)
+      time.sleep(1)
       loginButton = wait.until(
         EC.element_to_be_clickable((By.XPATH, '//button[./span[text()="签到 "]]'))
       )
       loginButton.click()
-      while True:
-        try:
-            WebDriverWait(driver, 1).until(
-              EC.presence_of_element_located((By.CLASS_NAME, "verify-bar-area"))
-            )
-        except Exception as e:
-            print(f"verify success")
-            break
+      success = False
+      while not success:
         # 使用 XPath 定位到目标 img 元素
         img_element = wait.until(
           EC.presence_of_element_located((By.XPATH, '//div[@class="verify-img-panel"]//img'))
@@ -112,8 +106,23 @@ if __name__ == "__main__":
         #     time.sleep(0.1)
         action.move_by_offset(xoffset=offsetX, yoffset=0)
         action.release().perform()
-        time.sleep(1)
-        
+        target_url = "https://link-ai.tech/api/captcha/check"
+        # 等待返回结果
+        WebDriverWait(driver, 10).until(
+            lambda d: any(req.url == target_url for req in d.requests)
+        )
+        for request in driver.requests:
+          if request.url == target_url and request.response:
+              status_code = request.response.status_code
+              response_body = request.response.body.decode('utf-8')
+              parsed_data = json.loads(response_body)
+              if parsed_data.get("repData") is not None:
+                  success = parsed_data.get("repData").get("result")
+                  if success:
+                      print("验证码输入成功")
+                  else:
+                      print("验证码输入失败,重试")
+              break
       driver.save_screenshot('temp1.png')          
   finally:
       print("*****final******")
