@@ -10,31 +10,13 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException,TimeoutException
 from selenium.webdriver.chrome.options import Options
-from PIL import Image
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.common.action_chains import ActionChains
-
-import base64
-import io
+from imageUtil import url_to_imageBytes,get_image_width
 
 userName = "xxx"
 password = "xxx"
 
-def url_to_image(data_uri):
-    # # 分割 Data URI 以获取 Base64 编码的部分
-    _, encoded_image = data_uri.split(',', 1)
-    # 解码 Base64 字符串为二进制数据
-    decoded_image = base64.b64decode(encoded_image)
-    # 使用 PIL 库将二进制数据转换为图像对象
-    image = Image.open(io.BytesIO(decoded_image))
-    return image
-  
-def url_to_imageBytes(data_uri):
-    # # 分割 Data URI 以获取 Base64 编码的部分
-    _, encoded_image = data_uri.split(',', 1)
-    # 解码 Base64 字符串为二进制数据
-    decoded_image = base64.b64decode(encoded_image)
-    return decoded_image
 
 if __name__ == "__main__":
   myUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
@@ -84,48 +66,55 @@ if __name__ == "__main__":
         EC.element_to_be_clickable((By.XPATH, '//button[./span[text()="签到 "]]'))
       )
       loginButton.click()
-      driver.save_screenshot('temp0.png')
-      # 使用 XPath 定位到目标 img 元素
-      img_element = wait.until(
-        EC.presence_of_element_located((By.XPATH, '//div[@class="verify-img-panel"]//img'))
-      )
-      back_url_value = img_element.get_attribute("src")
-      backImage = url_to_imageBytes(back_url_value)
+      while True:
+        try:
+            WebDriverWait(driver, 1).until(
+              EC.presence_of_element_located((By.CLASS_NAME, "verify-bar-area"))
+            )
+        except Exception as e:
+            print(f"verify success")
+            break
+        # 使用 XPath 定位到目标 img 元素
+        img_element = wait.until(
+          EC.presence_of_element_located((By.XPATH, '//div[@class="verify-img-panel"]//img'))
+        )
+        back_url_value = img_element.get_attribute("src")
+        backImage = url_to_imageBytes(back_url_value)
+        
+        img_element = wait.until(
+          EC.presence_of_element_located((By.XPATH, '//div[@class="verify-sub-block"]//img'))
+        )
+        tar_url_value = img_element.get_attribute("src")
+        tarImage = url_to_imageBytes(tar_url_value)
+        # 识别
+        det = ddddocr.DdddOcr(ocr=False,det=False,use_gpu=False,show_ad=False,beta=True)
+        result0 = det.slide_match(tarImage, backImage)
+        # result1 = det.slide_comparison(tarImage, backImage)
       
-      img_element = wait.until(
-        EC.presence_of_element_located((By.XPATH, '//div[@class="verify-sub-block"]//img'))
-      )
-      tar_url_value = img_element.get_attribute("src")
-      tarImage = url_to_imageBytes(tar_url_value)
-      # 识别
-      det = ddddocr.DdddOcr(ocr=False,det=False,use_gpu=False,show_ad=False,beta=True)
-      result0 = det.slide_match(tarImage, backImage)
-      # result1 = det.slide_comparison(tarImage, backImage)
-    
-      print(f"******************{result0}****************")
-      # print(f"******************{result1}****************")
-      
-      slideBar = driver.find_element(By.CLASS_NAME, "verify-bar-area")
-      barWidth = slideBar.rect["width"]
-      image = Image.open(io.BytesIO(backImage))
-      imageWidth, imageHeight = image.size
-      imageScale = barWidth/imageWidth
-      
-      startPosiX = result0.get("target_x")
-      tarPoxiX = result0.get("target")[0]
-      offsetX = (tarPoxiX - startPosiX) * imageScale
-      slider = driver.find_element(By.XPATH, '//div[@class="verify-move-block"]')
-      action = ActionChains(driver)
-      action.click_and_hold(slider)
-      # ofTimes = 10
-      # oneOffset = result0.get("target")[0] / ofTimes
-      # for _ in range(ofTimes):
-      #     # action.move_by_offset(xoffset=oneOffset, yoffset=0)
-      #     time.sleep(0.1)
-      action.move_by_offset(xoffset=offsetX, yoffset=0)
-      action.release().perform()
-      time.sleep(3)
-      driver.save_screenshot('temp1.png')
+        print(f"******************{result0}****************")
+        # print(f"******************{result1}****************")
+        
+        slideBar = driver.find_element(By.CLASS_NAME, "verify-bar-area")
+        barWidth = slideBar.rect["width"]
+        imageWidth = get_image_width(backImage)
+        imageScale = barWidth / imageWidth
+        
+        startPosiX = result0.get("target_x")
+        tarPoxiX = result0.get("target")[0]
+        offsetX = (tarPoxiX - startPosiX) * imageScale
+        slider = driver.find_element(By.XPATH, '//div[@class="verify-move-block"]')
+        action = ActionChains(driver)
+        action.click_and_hold(slider)
+        # ofTimes = 10
+        # oneOffset = result0.get("target")[0] / ofTimes
+        # for _ in range(ofTimes):
+        #     # action.move_by_offset(xoffset=oneOffset, yoffset=0)
+        #     time.sleep(0.1)
+        action.move_by_offset(xoffset=offsetX, yoffset=0)
+        action.release().perform()
+        time.sleep(1)
+        
+      driver.save_screenshot('temp1.png')          
   finally:
       print("*****final******")
       if driver is not None:

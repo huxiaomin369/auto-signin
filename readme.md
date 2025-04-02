@@ -4,6 +4,7 @@
 # 安装chrome 浏览器和驱动
 # 下载对应版本
 # https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json
+# 以Ubuntu24系统为例
 wget https://storage.googleapis.com/chrome-for-testing-public/115.0.5776.0/linux64/chrome-linux64.zip
 unzip chrome-linux64.zip
 sudo mv chrome-linux64 /opt/google-chrome
@@ -31,3 +32,6 @@ python setup.py install
 ```
 
 ## 运行
+```sh
+python testOcr.py
+```
