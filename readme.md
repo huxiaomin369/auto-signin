@@ -44,4 +44,7 @@ python testOcr.py
 # 使用conda管理环境
 conda env create -f environment.yml
 conda activate autosign
+
+# 使用 DrissionPage 无需安装selenium和chromedriver
+python main.py
 ```

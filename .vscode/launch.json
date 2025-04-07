@@ -8,9 +8,9 @@
       "name": "startDebug",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/testOcr.py",
+      "program": "${workspaceFolder}/main.py",
       "console": "integratedTerminal",
-      "stopOnEntry": true
+      "stopOnEntry": true,
     }
   ]
 }
